@@ -1,0 +1,79 @@
+# Import required libraries
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+import scipy.cluster.hierarchy as sch
+from sklearn.metrics import silhouette_score
+
+# Load the dataset
+df = pd.read_csv('sales_data_sample.csv')
+
+# Inspect the dataset
+print(df.head())
+print(df.info())
+
+# Select numerical columns for clustering
+numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns
+data = df[numerical_cols]
+
+# Standardize the data
+scaler = StandardScaler()
+scaled_data = scaler.fit_transform(data)
+
+# ===============================
+# K-MEANS CLUSTERING
+# ===============================
+
+# Determine the optimal number of clusters using the elbow method
+wcss = []
+for k in range(1, 11):
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(scaled_data)
+    wcss.append(kmeans.inertia_)
+
+# Plot the elbow curve
+plt.figure(figsize=(8,5))
+plt.plot(range(1, 11), wcss, marker='o')
+plt.title('Elbow Method')
+plt.xlabel('Number of clusters')
+plt.ylabel('WCSS')
+plt.show()
+
+# From the elbow plot, choose the optimal k (example: k=3)
+optimal_k = 3
+kmeans = KMeans(n_clusters=optimal_k, random_state=42)
+clusters = kmeans.fit_predict(scaled_data)
+
+# Add cluster labels to the original dataframe
+df['KMeans_Cluster'] = clusters
+print(df.head())
+
+# Optional: silhouette score for K-Means
+sil_score = silhouette_score(scaled_data, clusters)
+print(f'Silhouette Score for K-Means: {sil_score}')
+
+# ===============================
+# HIERARCHICAL CLUSTERING
+# ===============================
+
+# Create dendrogram to find optimal clusters
+plt.figure(figsize=(10, 7))
+dendrogram = sch.dendrogram(sch.linkage(scaled_data, method='ward'))
+plt.title('Dendrogram')
+plt.xlabel('Samples')
+plt.ylabel('Euclidean distances')
+plt.show()
+
+# Fit hierarchical clustering (example: n_clusters=3)
+from sklearn.cluster import AgglomerativeClustering
+hc = AgglomerativeClustering(n_clusters=optimal_k, affinity='euclidean', linkage='ward')
+hc_clusters = hc.fit_predict(scaled_data)
+
+# Add hierarchical cluster labels
+df['Hierarchical_Cluster'] = hc_clusters
+print(df.head())
+
+# Optional: silhouette score for hierarchical clustering
+sil_score_hc = silhouette_score(scaled_data, hc_clusters)
+print(f'Silhouette Score for Hierarchical Clustering: {sil_score_hc}')

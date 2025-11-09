@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+contract BankAccount {
+    address payable public owner;
+    event Deposited(address indexed from, uint256 amount);
+    event Withdrawn(address indexed to, uint256 amount);
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "You are not the owner.");
+        _;
+    }
+
+    constructor() {
+        owner = payable(msg.sender);
+    }
+
+    // Accept ETH via explicit function
+    function deposit() external payable {
+        require(msg.value > 0, "Send ETH to deposit");
+        emit Deposited(msg.sender, msg.value);
+    }
+
+    // Accept plain ETH sent to contract address (no calldata)
+    receive() external payable {
+        require(msg.value > 0, "Send ETH to deposit");
+        emit Deposited(msg.sender, msg.value);
+    }
+
+    // Fallback to accept calls with data
+    fallback() external payable {
+        if (msg.value > 0) {
+            emit Deposited(msg.sender, msg.value);
+        }
+    }
+
+    // Withdraw a specific amount to the owner
+    function withdraw(uint256 _amount) external onlyOwner {
+        require(address(this).balance >= _amount, "Insufficient contract balance");
+        // Using call pattern (recommended) and checking success
+        (bool sent, ) = owner.call{value: _amount}("");
+        require(sent, "Failed to send Ether");
+        emit Withdrawn(owner, _amount);
+    }
+
+    // Show the real contract ETH balance
+    function getBalance() external view onlyOwner returns (uint256) {
+        return address(this).balance;
+    }
+}

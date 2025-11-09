@@ -1,0 +1,100 @@
+# -----------------------------------------------------------
+# 1) IMPORT LIBRARIES
+# -----------------------------------------------------------
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score, mean_squared_error
+
+# -----------------------------------------------------------
+# 2) LOAD DATA (CHANGE FILE NAME HERE)
+# -----------------------------------------------------------
+
+df = pd.read_csv("uber.csv")     # <-- yaha apni file ka sahi naam likho
+
+print("\n✅ Dataset Loaded:")
+print(df.head())
+
+# -----------------------------------------------------------
+# 3) PRE-PROCESSING
+# -----------------------------------------------------------
+
+df.dropna(inplace=True)
+df = df[df["fare_amount"] > 0]
+
+df["pickup_datetime"] = pd.to_datetime(df["pickup_datetime"])
+df["hour"] = df["pickup_datetime"].dt.hour
+df["weekday"] = df["pickup_datetime"].dt.weekday
+
+# simple distance formula
+def distance(lat1, lon1, lat2, lon2):
+    return np.sqrt((lat2 - lat1)**2 + (lon2 - lon1)**2)
+
+df["distance"] = distance(
+    df["pickup_latitude"], df["pickup_longitude"],
+    df["dropoff_latitude"], df["dropoff_longitude"]
+)
+
+df = df[df["distance"] > 0]
+
+# -----------------------------------------------------------
+# 4) OUTLIER REMOVAL (IQR METHOD)
+# -----------------------------------------------------------
+
+Q1 = df["fare_amount"].quantile(0.25)
+Q3 = df["fare_amount"].quantile(0.75)
+IQR = Q3 - Q1
+
+df = df[(df["fare_amount"] >= Q1 - 1.5*IQR) &
+        (df["fare_amount"] <= Q3 + 1.5*IQR)]
+
+print("\n✅ Cleaned Dataset:")
+print(df.head())
+
+# -----------------------------------------------------------
+# 5) SIMPLE EASY GRAPH (NO HEATMAP)
+# -----------------------------------------------------------
+
+plt.figure(figsize=(7,4))
+plt.scatter(df["distance"][:200], df["fare_amount"][:200])
+plt.xlabel("Distance")
+plt.ylabel("Fare Amount")
+plt.title("Distance vs Fare (Easy Graph)")
+plt.show()
+
+# -----------------------------------------------------------
+# 6) TRAIN MODELS
+# -----------------------------------------------------------
+
+X = df[["distance", "passenger_count", "hour", "weekday"]]
+y = df["fare_amount"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Linear Regression
+lr = LinearRegression()
+lr.fit(X_train, y_train)
+pred_lr = lr.predict(X_test)
+
+# Random Forest
+rf = RandomForestRegressor(n_estimators=200, random_state=42)
+rf.fit(X_train, y_train)
+pred_rf = rf.predict(X_test)
+
+# -----------------------------------------------------------
+# 7) EVALUATION
+# -----------------------------------------------------------
+
+def evaluate(model, y, pred):
+    print("\n📌", model)
+    print("R2 Score:", r2_score(y, pred))
+    print("RMSE:", np.sqrt(mean_squared_error(y, pred)))
+
+evaluate("Linear Regression", y_test, pred_lr)
+evaluate("Random Forest", y_test, pred_rf)

@@ -1,0 +1,104 @@
+import java.util.Scanner;
+
+public class NQueens {
+
+    // Print the board
+    static void printBoard(int[][] board, int n) {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                System.out.print(board[i][j] + " ");
+            }
+            System.out.println();
+        }
+        System.out.println();
+    }
+
+    // Check if queen can be placed safely
+    static boolean isSafe(int[][] board, int row, int col, int n) {
+
+        // Check column
+        for (int i = 0; i < row; i++) {
+            if (board[i][col] == 1)
+                return false;
+        }
+
+        // Upper left diagonal
+        int i = row - 1, j = col - 1;
+        while (i >= 0 && j >= 0) {
+            if (board[i][j] == 1) return false;
+            i--; j--;
+        }
+
+        // Upper right diagonal
+        i = row - 1; j = col + 1;
+        while (i >= 0 && j < n) {
+            if (board[i][j] == 1) return false;
+            i--; j++;
+        }
+
+        return true;
+    }
+
+    // Backtracking function
+    static boolean solveNQueen(int[][] board, int row, int n) {
+
+        // If all queens are placed
+        if (row == n) {
+            System.out.println("Final N-Queen Solution:");
+            printBoard(board, n);
+            return true;
+        }
+
+        // If row contains a pre-placed queen → skip to next row
+        boolean hasQueen = false;
+        for (int col = 0; col < n; col++) {
+            if (board[row][col] == 1) {
+                hasQueen = true;
+                break;
+            }
+        }
+
+        if (hasQueen) {
+            return solveNQueen(board, row + 1, n);
+        }
+
+        // Try placing queen in any column
+        for (int col = 0; col < n; col++) {
+
+            if (isSafe(board, row, col, n)) {
+                board[row][col] = 1; // place
+
+                if (solveNQueen(board, row + 1, n))
+                    return true;
+
+                board[row][col] = 0; // backtrack
+            }
+        }
+
+        return false;
+    }
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter the value of N: ");
+        int n = sc.nextInt();
+
+        int[][] board = new int[n][n];
+
+        System.out.print("Enter row to place first queen (0 to " + (n - 1) + "): ");
+        int r = sc.nextInt();
+
+        System.out.print("Enter column to place first queen (0 to " + (n - 1) + "): ");
+        int c = sc.nextInt();
+
+        board[r][c] = 1;   // Place first queen manually
+
+        System.out.println("\nFirst queen placed at [" + r + "][" + c + "]\n");
+
+        if (!solveNQueen(board, 0, n)) {
+            System.out.println("No solution exists for this configuration!");
+        }
+    }
+}
